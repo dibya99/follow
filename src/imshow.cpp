@@ -11,8 +11,12 @@ int h=0,s=0,v=65;
 int hmax=7,smax=125,vmax=252;
 int flag=0;
 
+int kp=1,ki=0,kd=7;
+float P=0,I=0,D=0;
+
 int linearx=0,angularz=0;
 float dev=0;
+float pdev=0;
 
 geometry_msgs::Twist mg;
 
@@ -21,7 +25,7 @@ int benchmark=1000;
 Mat img,img2,img3;
 void call(const sensor_msgs::ImageConstPtr& msg)
 {
-
+  pdev=dev;
   cv::namedWindow("W1",CV_WINDOW_NORMAL);
   cv::namedWindow("W2",CV_WINDOW_NORMAL);
   cv::createTrackbar("h","W1",&h,255,NULL);
@@ -31,6 +35,10 @@ void call(const sensor_msgs::ImageConstPtr& msg)
   cv::createTrackbar("v","W1",&v,255,NULL);
   cv::createTrackbar("vamx","W1",&vmax,255,NULL);
   cv::createTrackbar("benchmark","W2",&benchmark,1000,NULL);
+  cv::createTrackbar("Kp","W2",&kp,10,NULL);
+  cv::createTrackbar("Ki","W2",&ki,10,NULL);
+  cv::createTrackbar("Kd","W2",&kd,10,NULL);
+
   img=cv_bridge::toCvShare(msg,"bgr8")->image;
   cvtColor(img,img2,COLOR_BGR2HSV);
   inRange(img2,Scalar(h,s,v),Scalar(hmax,smax,vmax),img2);
@@ -54,6 +62,9 @@ void call(const sensor_msgs::ImageConstPtr& msg)
   Point p(m.m10/m.m00, m.m01/m.m00);
   Point cen(img.cols/2,img.rows/2);
   dev=float(int(p.x)-int(cen.x));
+  P=dev;
+  I=dev+pdev;
+  D=dev-pdev;
   //cout<<int(p.x)<<endl;
   cout<<dev<<endl;
   if(int(p.x)==INT_MIN)
@@ -89,7 +100,7 @@ while(ros::ok())
  if((dev>0 && dev<=benchmark)|| (dev<0 && dev>=-benchmark))
  {
  mg.linear.x=0.2;
- mg.angular.z=dev/200;
+ mg.angular.z=(P*kp+I*ki+D*kd)/200;
 }
  else
  {
